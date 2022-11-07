@@ -1,6 +1,6 @@
 import numpy as np
 import rclpy
-from moveit_msgs.action import MoveGroup
+from moveit_msgs.action import MoveGroup, ExecuteTrajectory
 from rclpy.action import ActionClient
 from moveit_msgs.srv import GetPositionIK
 from moveit_msgs.msg import PositionIKRequest, Constraints, JointConstraint
@@ -19,6 +19,9 @@ class PlanAndExecute:
         self.node._action_client = ActionClient(self.node,
                                                 MoveGroup,
                                                 '/move_action')
+        self.node._execute_client = ActionClient(self.node,
+                                                ExecuteTrajectory,
+                                                '/execute_trajectory')
         # Make it so we can call the IK service
         self.node.cbgroup = ReentrantCallbackGroup()
         self.node.IK = self.node.create_client(GetPositionIK,
@@ -83,7 +86,7 @@ class PlanAndExecute:
         print("AFTER")
         printIKreq(self.master_goal.request.goal_constraints)
     
-    async def plan_to_position(self, start_pose, end_pos):
+    async def plan_to_position(self, start_pose, end_pos, execute=False):
         """Returns MoveGroup action from a start pose to an end position"""
         request = PositionIKRequest()
         # printIKreq(request)
@@ -126,7 +129,7 @@ class PlanAndExecute:
         print("wait for server")
         self.node._action_client.wait_for_server()
         print("return")
-        plan = self.node._action_client.send_goal_async(self.master_goal)
+        plan = await self.node._action_client.send_goal_async(self.master_goal)
         printIKreq(plan)
         return plan
         
@@ -139,18 +142,14 @@ class PlanAndExecute:
         # 4. Plug this into mvg.request.goal_constraints.joint_constraints (joint_state type)
         # 5. Return mvg action
         # return mvg
-    async def plan_to_orientation(self, start_pose, end_orientation):
+    async def plan_to_orientation(self, start_pose, end_orientation, execute=False):
         """Returns MoveGroup action from a start pose to an end orientation"""
         # Make copy of MoveGroup
         mvg = self.move_group
         # Call GetPositionIK.srv
         angles = await self.node.IK.call_async(end_orientation)
         return mvg
-    def plan_to_pose(self,start_pose, end_pose):
+    def plan_to_pose(self,start_pose, end_pose, execute=False):
         """Returns MoveGroup action from a start pose to an end pose (position + orientation)"""
         mvg = MoveGroup()
         return mvg
-    def execute(self, mvg):
-        """Takes a MoveGroup object, sends it through the client"""
-        self.master_goal.planning_options.plan_only = False
-        pass
