@@ -306,6 +306,16 @@ class Test(Node):
         self.state = State.PLACEBLOCK
         return response
     
+    def is_destroy(self, leng):
+        if leng == 1:
+            self.get_logger().info("FRANK CAN'T MOVE THERE!!! FRANK ANGRY!!!")
+            self.destroy_pose.position.x = 0.58
+            self.destroy_pose.position.y = -self.goal_pose.position.y
+            self.destroy_pose.position.z = self.goal_pose.position.z
+            self.execute = True
+            self.start_pose = None
+            self.state = State.DESTROY
+    
     async def place_plane(self):
         plane_pose = Pose()
         plane_pose.position.x = 0.0
@@ -389,9 +399,10 @@ class Test(Node):
                 pre_grasp.position.y  = self.goal_pose.position.y + offset
             else:
                 pre_grasp.position.y = self.goal_pose.position.y - offset
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    pre_grasp, 0.1,
                                                                    self.execute)
+            self.is_destroy(cart_len)
         elif self.state == State.ORIENT:
             self.get_logger().info('ORIENT STATE')
             orientation_pose = copy.deepcopy(self.goal_pose)
@@ -434,9 +445,10 @@ class Test(Node):
             else:
                 pre_grasp.position.y = self.goal_pose.position.y - offset
             self.pregrasp_pose = pre_grasp
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    pre_grasp, 0.5,
                                                                    self.execute)
+            self.is_destroy(cart_len)
             self.prev_state = State.PREGRAB
             self.state = State.GRAB
 
@@ -451,9 +463,10 @@ class Test(Node):
                 grab_pose.position.y  = self.goal_pose.position.y + offset
             else:
                 grab_pose.position.y = self.goal_pose.position.y - offset
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    grab_pose, 1.2,
                                                                    self.execute)
+            self.is_destroy(cart_len)
             self.prev_state = State.GRAB
             self.state = State.CLOSE
 
@@ -471,9 +484,10 @@ class Test(Node):
             # TODO: pull block out straight
             pull_pose = copy.deepcopy(self.pregrasp_pose)
             self.get_logger().info(str(pull_pose))
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    pull_pose, 0.25,
                                                                    self.execute)
+            self.is_destroy(cart_len)
             d = math.sqrt(pull_pose.position.x**2+pull_pose.position.y**2)
             self.get_logger().info('\n\n\ndistance\n\n\n')
             self.get_logger().info(str(d))
@@ -487,9 +501,10 @@ class Test(Node):
             # postpull_pose.position.x = 0.5
             postpull_pose.position.z = 0.487
             self.prev_state = State.POSTPULL
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    postpull_pose, 1.2,
                                                                    self.execute)
+            self.is_destroy(cart_len)
             self.state = State.READY
         elif self.state == State.READY:
             self.get_logger().info('State.Ready')
@@ -510,9 +525,10 @@ class Test(Node):
             self.get_logger().info('\n\n\nReady')
             self.get_logger().info(str(self.prev_state))
             if self.prev_state == State.POSTPULL:
-                self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+                self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                        ready_pose, 1.2,
                                                                        self.execute)
+                self.is_destroy(cart_len)
                 self.get_logger().info('ORIENTING')
                 self.prev_state = State.READY
                 self.state = State.ORIENT2
@@ -611,9 +627,10 @@ class Test(Node):
                     set_pose.position.y = self.place_pose.position.y - offset
             # TODO update this with height of tower
             set_pose.position.z = self.place_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    set_pose, 0.5,
                                                                    self.execute)
+            self.is_destroy(cart_len)
             self.prev_state = State.SET            
             self.state = State.RELEASE
         elif self.state == State.RELEASE:
@@ -639,7 +656,7 @@ class Test(Node):
                     prepush_pose.position.y = self.place_pose.position.y - offset
             # prepush_pose.position.y = self.place_pose.position.y - offset
             prepush_pose.position.z = self.place_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    prepush_pose, 1.2,
                                                                    self.execute)
             self.prev_state = State.PREPUSH            
@@ -669,7 +686,7 @@ class Test(Node):
                     push_pose.position.y = self.place_pose.position.y - offset
             push_pose.position.x = self.place_pose.position.x - offset
             push_pose.position.z = self.place_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    push_pose, 0.25,
                                                                    self.execute)
             self.prev_state = State.PUSH
@@ -689,7 +706,7 @@ class Test(Node):
                 else:
                     postpush_pose.position.y = self.place_pose.position.y - offset
             postpush_pose.position.z = self.place_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    postpush_pose, 1.2,
                                                                    self.execute)
             self.place_counter += 1
@@ -719,7 +736,7 @@ class Test(Node):
             prepickup_pose.position.x = 0.404
             prepickup_pose.position.y = 0.293
             prepickup_pose.position.z = 0.487
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    prepickup_pose, 1.2,
                                                                    self.execute)
         elif self.state == State.PICKUP:
@@ -729,7 +746,7 @@ class Test(Node):
             pickup_pose.position.x = 0.404
             pickup_pose.position.y = 0.293
             pickup_pose.position.z = 0.038
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    pickup_pose, 1.0,
                                                                    self.execute)
             self.future = await self.PlanEx.grab(0.025)
@@ -741,7 +758,7 @@ class Test(Node):
             lift_pose.position.x = 0.404
             lift_pose.position.y = 0.293
             lift_pose.position.z = self.poke_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    lift_pose, 0.8,
                                                                    self.execute)
         
@@ -756,7 +773,7 @@ class Test(Node):
             prepoke_pose.orientation.y = 0.3826834
             prepoke_pose.orientation.z = 0.0
             prepoke_pose.orientation.w = 0.0
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    prepoke_pose, 0.8,
                                                                    self.execute)
         
@@ -783,7 +800,7 @@ class Test(Node):
             poke_pose.position.x = self.poke_pose.position.x - offset
             poke_pose.position.y = self.poke_pose.position.y - offset
             poke_pose.position.z = self.poke_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    poke_pose, 0.25,
                                                                    self.execute)
         
@@ -794,7 +811,7 @@ class Test(Node):
             postpoke_pose.position.x = self.poke_pose.position.x
             postpoke_pose.position.y = self.poke_pose.position.y
             postpoke_pose.position.z = self.poke_pose.position.z
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    postpoke_pose, 0.25,
                                                                    self.execute)
         
@@ -820,7 +837,7 @@ class Test(Node):
             placepoker_pose.position.x = 0.404
             placepoker_pose.position.y = 0.293
             placepoker_pose.position.z = 0.038
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    placepoker_pose, 0.25,
                                                                    self.execute)
             self.future = await self.PlanEx.release()
@@ -833,7 +850,7 @@ class Test(Node):
             postplacepoker_pose.position.x = 0.404
             postplacepoker_pose.position.y = 0.293
             postplacepoker_pose.position.z = 0.487
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    postplacepoker_pose, 1.0,
                                                                    self.execute)
         elif self.state == State.PREDESTROY:
@@ -855,14 +872,15 @@ class Test(Node):
             self.prev_state = State.PREDESTROY
         elif self.state == State.DESTROY:
             self.get_logger().info('Destroying')
-            self.destroy_pose.position.x = 0.622
-            self.destroy_pose.position.y = -0.3
-            self.destroy_pose.position.z = 0.146
-            self.destroy_pose.orientation.x = 0.556
-            self.destroy_pose.orientation.y = 0.436
-            self.destroy_pose.orientation.z = 0.432
-            self.destroy_pose.orientation.w = 0.56
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            if self.prev_state == State.PREDESTROY:
+                self.destroy_pose.position.x = 0.622
+                self.destroy_pose.position.y = -0.3
+                self.destroy_pose.position.z = 0.146
+                self.destroy_pose.orientation.x = 0.556
+                self.destroy_pose.orientation.y = 0.436
+                self.destroy_pose.orientation.z = 0.432
+                self.destroy_pose.orientation.w = 0.56
+            self.future, cart_len = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    self.destroy_pose, 1.5,
                                                                    self.execute)
             self.state = State.READY

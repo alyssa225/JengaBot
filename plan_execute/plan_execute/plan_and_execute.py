@@ -129,56 +129,6 @@ class PlanAndExecute:
         new_str = (str(req)).replace(',', ',\n')
         self.node.get_logger().info(new_str)
 
-    def euler_from_quaternion(self, x, y, z, w):
-        """
-        Convert a quaternion into euler angles (roll, pitch, yaw)
-        roll is rotation around x in radians (counterclockwise)
-        pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
-        """
-        t0 = +2.0 * (w * x + y * z)
-        t1 = +1.0 - 2.0 * (x * x + y * y)
-        roll_x = math.atan2(t0, t1)
-     
-        t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
-        pitch_y = math.asin(t2)
-     
-        t3 = +2.0 * (w * z + x * y)
-        t4 = +1.0 - 2.0 * (y * y + z * z)
-        yaw_z = math.atan2(t3, t4)
-        if roll_x < 0:
-            roll_x = roll_x + 2*math.pi
-        if pitch_y < 0:
-            pitch_y = pitch_y + 2*math.pi
-        if yaw_z < 0:
-            yaw_z = yaw_z + 2*math.pi
-        return roll_x, pitch_y, yaw_z # in radians
-
-    def get_quaternion_from_euler(self, roll, pitch, yaw):
-        """
-        Convert an Euler angle to a quaternion.
-        
-        Input
-            :param roll: The roll (rotation around x-axis) angle in radians.
-            :param pitch: The pitch (rotation around y-axis) angle in radians.
-            :param yaw: The yaw (rotation around z-axis) angle in radians.
-        
-        Output
-            :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-        """
-        qx = (math.sin(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) -
-              math.cos(roll/2) * math.sin(pitch/2) * math.sin(yaw/2))
-        qy = (math.cos(roll/2) * math.sin(pitch/2) * math.cos(yaw/2) +
-              math.sin(roll/2) * math.cos(pitch/2) * math.sin(yaw/2))
-        qz = (math.cos(roll/2) * math.cos(pitch/2) * math.sin(yaw/2) -
-              math.sin(roll/2) * math.sin(pitch/2) * math.cos(yaw/2))
-        qw = (math.cos(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) +
-              math.sin(roll/2) * math.sin(pitch/2) * math.sin(yaw/2))
- 
-        return [qx, qy, qz, qw]
-
     def js_callback(self, data):
         """Save js with the joint state data (sensor_msgs/JointStates type)."""
         self.js = data
@@ -224,40 +174,19 @@ class PlanAndExecute:
         zf = end_pose.position.z
         last_point = copy.copy(end_pose)
         last_point.orientation = start_pose.orientation 
-        # xoi, yoi, zoi = self.euler_from_quaternion(start_pose.orientation.x,
-        #                                            start_pose.orientation.y, 
-        #                                            start_pose.orientation.z,
-        #                                            start_pose.orientation.w)
-        # xof, yof, zof = self.euler_from_quaternion(end_pose.orientation.x,
-        #                                            end_pose.orientation.y, 
-        #                                            end_pose.orientation.z,
-        #                                            end_pose.orientation.w)
+
         self.node.get_logger().info("initial and final angles")
         d = math.sqrt((xf-xi)**2 + (yf-yi)**2 + (zf-zi)**2)
         sp = math.ceil(d / max_step)+1
         sx = (xf-xi)/sp
         sy = (yf-yi)/sp
         sz = (zf-zi)/sp
-        # sox = (xof-xoi)/sp
-        # soy = (yof-yoi)/sp
-        # soz = (zof-zoi)/sp
         self.node.get_logger().info("delta angles")
         for i in range(sp):
             npose = points[i]
             npose.position.x = points[i].position.x + sx
             npose.position.y = points[i].position.y + sy
             npose.position.z = points[i].position.z + sz
-            # nx, ny, nz = xof, yof, zof = self.euler_from_quaternion(points[i].orientation.x,
-            #                                                         points[i].orientation.y, 
-            #                                                         points[i].orientation.z,
-            #                                                         points[i].orientation.w)
-            # nx = nx + sox
-            # ny = ny + soy
-            # nz = nz + soz
-            # self.printBlock([nx, ny, nz])
-            # [npose.orientation.x, npose.orientation.y,
-            #  npose.orientation.z, npose.orientation.w] = self.get_quaternion_from_euler(nx, ny, nz)
-            # self.printBlock(npose)
             points.append(npose)
         points.append(last_point)
         #self.printBlock(len(points))
@@ -267,7 +196,7 @@ class PlanAndExecute:
 
     def createCartreq(self, start_pose, end_pose):
         """Create an Cartisian message filled with info from the goal pose and orientation."""
-        max_step = 0.005
+        max_step = 0.001
         points = self.createWaypoints(start_pose, end_pose, max_step)
         self.node.get_logger().info("creating cartisian message")
         constraint = Constraints()
@@ -394,14 +323,12 @@ class PlanAndExecute:
             return None
 
     async def plan_to_cartisian_pose(self, start_pose, end_pose, v, execute):
-        """Return MoveGroup action from a start to end pose (position + orientation)."""
+        """Return Cartesian path from a start to end pose."""
         self.node.get_logger().info("Plan to Pose")
-        cart_successed = False
-        # while not cart_successed:
         # if not start_pose:
         start_pose = self.getStartPose()
         self.master_goal.request.start_state.joint_state = self.js
-        self.fill_constraints(self.js.name, self.js.position, 0.005)
+        self.fill_constraints(self.js.name, self.js.position, 0.001)
         # else:
         #     request_start = self.createIKreq(start_pose.position, start_pose.orientation)
         #     request_temp = GetCartesianPath.Request(ik_request=request_start)
@@ -411,24 +338,17 @@ class PlanAndExecute:
         #     self.node.get_logger().info(self.master_goal.request.start_state.joint_state)
 
         self.master_goal.planning_options.plan_only = not execute
-        self.node.get_logger().info("requesting cartisian message")
+        self.node.get_logger().info("requesting cartesian message")
         header, start_state, group_name, link_name, waypoints, max_step, jump_threshold,\
         prismatic_jump_threshold, revolute_jump_threshold, avoid_collisions,\
         path_constraints= self.createCartreq(start_pose, end_pose)
         self.node.get_logger().info("recieved cartesian message")
-        self.node.get_logger().info("calling cartisian service")
-        cart_successed = False
+        self.node.get_logger().info("calling cartesian service")
         Cart_response = await self.callCart(header, start_state, group_name, link_name, waypoints,
                                             max_step, jump_threshold, prismatic_jump_threshold, 
                                             revolute_jump_threshold, avoid_collisions,
                                             path_constraints)
-            # if len(Cart_response.joint_trajectory.points) > 1:
-            #     cart_successed = True
-            # else:
-            #     self.node.get_logger().info("cartisian service failed, trying again")
-            #     # add a random offset to the end_pose
-            #     end_pose.position.x += random.uniform(-0.01, 0.01)
-        self.node.get_logger().info("finished cartstian service")
+        self.node.get_logger().info("finished cartestian service")
         # if Cart_response:
             # Create a plan off current joint states
             # plan_result = await self.plan(Cart_response)
@@ -450,13 +370,15 @@ class PlanAndExecute:
             
             # execute the plan
             # self.node.get_logger().info("\n\n\n cart response \n\n\n")
-            self.node.get_logger().info(f"Cart Response Len: {len(Cart_response.joint_trajectory.points)}")
-            # self.printBlock(Cart_response)
+            self.node.get_logger().info("Cart Response length:")
+            self.printBlock(len(Cart_response.joint_trajectory.points))
             traj_goal = ExecuteTrajectory.Goal(trajectory=Cart_response)
             execute_future = await self.node._execute_client.send_goal_async(traj_goal)
             execute_result = await execute_future.get_result_async()
             self.node.get_logger().info("finished executing cartstian service")
-            return execute_result
+            self.node.get_logger().info("\n\n\nwhat am I returning\n\n\n")
+            self.printBlock(execute_result)
+            return execute_result, len(Cart_response.joint_trajectory.points)
         #     else:
         #         # return plan_result
         # else:
@@ -584,7 +506,7 @@ class PlanAndExecute:
         grasp_goal = Grasp.Goal()
         grasp_goal.width = width
         grasp_goal.speed = 0.03
-        grasp_goal.force = 100.0
+        grasp_goal.force = 80.0
         await self.node._gripper_client.send_goal_async(grasp_goal)
         self.node.get_logger().info("grabbed")
     

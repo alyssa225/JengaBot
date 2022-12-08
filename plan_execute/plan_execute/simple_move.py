@@ -122,6 +122,7 @@ class Test(Node):
         self.place_pose.position.x = 0.474
         self.place_pose.position.y = -0.069
         self.place_pose.position.z = 0.380
+        self.poke_poses = []
         self.poke_pose = Pose()
         self.destroy_pose = Pose()
 
@@ -344,9 +345,11 @@ class Test(Node):
                 pre_grasp.position.y  = self.goal_pose.position.y + offset
             else:
                 pre_grasp.position.y = self.goal_pose.position.y - offset
-            self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
+            self.future, cart_length = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    pre_grasp, 0.1,
                                                                    self.execute)
+            self.get_logger().info('\n\n\ncartesian returns\n\n\n')
+            self.get_logger().info(str(cart_length))
         #     # await self.PlanEx.grab()
         elif self.state == State.ORIENT:
             # TODO: if y > 0, do something, else do something else
