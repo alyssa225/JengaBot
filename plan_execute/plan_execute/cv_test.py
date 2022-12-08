@@ -112,9 +112,11 @@ class Test(Node):
                 ('y_rot', 0.6788123266849486),
                 ('y_trans', 0.003084971991525019),
                 ('z_rot', -0.013746853789119589),
-                ('z_trans', 0.7704838271477458)
+                ('z_trans', 0.7704838271477458),
+                ('players', 1)
             ])
 
+        # Assign parameter values
         self.rw = self.get_parameter("w_rot").get_parameter_value().double_value
         self.rx = self.get_parameter("x_rot").get_parameter_value().double_value
         self.ry = self.get_parameter("y_rot").get_parameter_value().double_value
@@ -122,6 +124,9 @@ class Test(Node):
         self.tx = self.get_parameter("x_trans").get_parameter_value().double_value
         self.ty = self.get_parameter("y_trans").get_parameter_value().double_value
         self.tz = self.get_parameter("z_trans").get_parameter_value().double_value
+
+        self.players = self.get_parameter("players").get_parameter_value().double_value
+
         self.freq = 100.
         self.cbgroup = MutuallyExclusiveCallbackGroup()
         period = 1.0 / self.freq
@@ -692,14 +697,21 @@ class Test(Node):
             self.future = await self.PlanEx.plan_to_cartisian_pose(self.start_pose,
                                                                    postpush_pose, 1.2,
                                                                    self.execute)
-            self.place_counter += 1
-            if (self.place_counter == 3) or (self.place_counter == 6):
-                # Publish something
-                self.get_logger().info("ADD A LAYER!!!")
-                self.layer_added_pub.publish(Bool())
+            # Determine increments to piece based on number of players
+            if self.players == 1:
+                self.place_counter += 1
+                if (self.place_counter == 3) or (self.place_counter == 6):
+                    # Publish something
+                    self.get_logger().info("ADD A LAYER!!!")
+                    self.layer_added_pub.publish(Bool())
+            else:
+                self.place_counter += 2
+                if (self.place_counter == 4) or (self.place_counter == 6):
+                    self.get_logger().info("ADD A LAYER!!! (after)")
+                    self.layer_added_pub.publish(Bool())
             if self.place_counter>=6:
                 self.place_counter = 0
-                # TODO increment all of the zs in self.place_locations
+                # increment all of the zs in self.place_locations
                 for i in range(0, len(self.place_locations)):
                     self.place_locations[i].position.z += 2.0*self.piece_height
             self.prev_state = State.POSTPUSH
