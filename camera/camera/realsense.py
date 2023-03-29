@@ -34,6 +34,8 @@ class State(Enum):
     FINDHANDS = auto()
     # Waiting for motion to finish
     WAITINGMOTION = auto()
+    # Don't do anything
+    IDLE = auto()
 
 
 class Cam(Node):
@@ -69,6 +71,11 @@ class Cam(Node):
         # set timer frequency
         self.freq = 60.
         self.timer = self.create_timer(1./self.freq, self.timer_callback)
+
+        self.declare_parameter('use_ml_model', False)
+        self.use_ml_model = self.get_parameter('use_ml_model').get_parameter_value().bool_value
+
+        self.get_logger().info(f"use_ml_model: {self.use_ml_model}")
 
         # create subscriptions: camera color, camera depth, camera aligned color and depth,
         # piece found, finished place, layer added
@@ -248,7 +255,10 @@ class Cam(Node):
     def finished_place_cb(self, _):
         """Movement node has placed the brick on top."""
         self.get_logger().info('Finished placing')
-        self.state = State.FINDHANDS
+        if self.use_ml_model:
+            self.state = State.FINDHANDS
+        else:
+            self.state = State.IDLE
 
     def layer_added_cb(self, _):
         """Movement node has placed a layer of blocks. We can now scan one more layer up."""
@@ -507,7 +517,10 @@ class Cam(Node):
                 self.piece_y = []
                 self.piece_z = []
                 self.ct = 0
-                self.state = State.FINDHANDS
+                if self.use_ml_model:
+                    self.state = State.FINDHANDS
+                else:
+                    self.state = State.IDLE
             largest_area, centroid_pose, line_direction = self.get_mask(get_lines=True)
             if largest_area:
                 # self.get_logger().info(f"Largest area {largest_area}")
@@ -577,7 +590,10 @@ class Cam(Node):
                 # This should not happen. But if it doesn't find anything large in the band:
                 self.scan_index = self.scan_start
                 self.get_logger().info("Didn't find the table?")
-                self.state = State.FINDHANDS
+                if self.use_ml_model:
+                    self.state = State.FINDHANDS
+                else:
+                    self.state = State.IDLE
 
             # The contour of the table will not be a square, but it will be a very large area
             # (since there is a big square cutout in it from the tower)
@@ -591,7 +607,10 @@ class Cam(Node):
                     self.table = self.band_start
                     self.scan_index = self.scan_start
                     self.band_start = self.scan_start
-                    self.state = State.FINDHANDS
+                    if self.use_ml_model:
+                        self.state = State.FINDHANDS
+                    else:
+                        self.state = State.IDLE
 
         elif self.state == State.SCANNING:
             # Keep scanning downwards
@@ -602,7 +621,10 @@ class Cam(Node):
             if self.scan_index+1.2*self.band_width > self.table:
                 self.scan_index = self.scan_start
                 self.get_logger().info("Didn't find anything in scan")
-                self.state = State.FINDHANDS
+                if self.use_ml_model:
+                    self.state = State.FINDHANDS
+                else:
+                    self.state = State.IDLE
             else:
                 # Look for piece sticking out in range from top to table
                 largest_area, centroid_pose, _ = self.get_mask()

@@ -86,8 +86,40 @@ class Test(Node):
                 ('y_rot', 0.6788123266849486),
                 ('y_trans', 0.003084971991525019),
                 ('z_rot', -0.013746853789119589),
-                ('z_trans', 0.7704838271477458)
+                ('z_trans', 0.7704838271477458),
+                ('offset_x_pos',  0.009),
+                ('offset_y_pos',  0.008),
+                ('offset_x_neg',  0.013),
+                ('offset_y_neg',  0.009),
+                ('offset_z_pos',  0.008),
+                ('offset_z_neg', -0.006)
             ])
+        # Offsets for finding pieces. Original FINDPIECE code:
+        """
+        if self.goal_pose.position.y > 0:
+            self.goal_pose.position.x += 0.009
+            self.goal_pose.position.y -= -0.008
+        else:
+            self.goal_pose.position.x += 0.013
+            self.goal_pose.position.y -= -0.009
+        if self.goal_pose.position.y > 0:
+            self.goal_pose.position.z = t.transform.translation.z + 0.008
+        else:
+            self.goal_pose.position.z = t.transform.translation.z - 0.006
+        """
+        # Updated FINDPIECE code
+        """
+        if self.goal_pose.position.y > 0:
+            self.goal_pose.position.x += self.offset_x_pos
+            self.goal_pose.position.y += self.offset_y_pos
+        else:
+            self.goal_pose.position.x += self.offset_x_neg
+            self.goal_pose.position.y += self.offset_y_neg
+        if self.goal_pose.position.y > 0:
+            self.goal_pose.position.z = t.transform.translation.z + self.offset_z_pos
+        else:
+            self.goal_pose.position.z = t.transform.translation.z + self.offset_z_neg
+        """
 
         self.rw = self.get_parameter("w_rot").get_parameter_value().double_value
         self.rx = self.get_parameter("x_rot").get_parameter_value().double_value
@@ -96,6 +128,14 @@ class Test(Node):
         self.tx = self.get_parameter("x_trans").get_parameter_value().double_value
         self.ty = self.get_parameter("y_trans").get_parameter_value().double_value
         self.tz = self.get_parameter("z_trans").get_parameter_value().double_value
+        
+        self.offset_x_pos = self.get_parameter("offset_x_pos").get_parameter_value().double_value
+        self.offset_y_pos = self.get_parameter("offset_y_pos").get_parameter_value().double_value
+        self.offset_x_neg = self.get_parameter("offset_x_neg").get_parameter_value().double_value
+        self.offset_y_neg = self.get_parameter("offset_y_neg").get_parameter_value().double_value
+        self.offset_z_pos = self.get_parameter("offset_z_pos").get_parameter_value().double_value
+        self.offset_z_neg = self.get_parameter("offset_z_neg").get_parameter_value().double_value
+
         self.freq = 100.
         self.cbgroup = MutuallyExclusiveCallbackGroup()
         period = 1.0 / self.freq
@@ -787,15 +827,15 @@ class Test(Node):
                 self.goal_pose.position.y = t.transform.translation.y
                 self.get_logger().info(f'y init: {t.transform.translation.y}')
                 if self.goal_pose.position.y > 0:
-                    self.goal_pose.position.x += 0.009
-                    self.goal_pose.position.y -= -0.008
+                    self.goal_pose.position.x += self.offset_x_pos
+                    self.goal_pose.position.y += self.offset_y_pos
                 else:
-                    self.goal_pose.position.x += 0.013
-                    self.goal_pose.position.y -= -0.009
+                    self.goal_pose.position.x += self.offset_x_neg
+                    self.goal_pose.position.y += self.offset_y_neg
                 if self.goal_pose.position.y > 0:
-                    self.goal_pose.position.z = t.transform.translation.z + 0.008
+                    self.goal_pose.position.z = t.transform.translation.z + self.offset_z_pos
                 else:
-                    self.goal_pose.position.z = t.transform.translation.z - 0.006
+                    self.goal_pose.position.z = t.transform.translation.z + self.offset_z_neg
                 self.goal_pose.orientation.x = t.transform.rotation.x
                 self.goal_pose.orientation.y = t.transform.rotation.y
                 self.goal_pose.orientation.z = t.transform.rotation.z
