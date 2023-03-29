@@ -20,11 +20,15 @@ To assist with tuning various offsets when pulling blocks, we also added an `off
 * Clone the repository, and from your root workspace, run `vcs import --recursive --input src/hw3group-jengabells/camera/config/jenga_vision.repo src/` to install the necessary april tag packages.
 * Plug into the Franka and the realsense camera.
 * `ssh student@station`, then `ros2 launch franka_moveit_config moveit.launch.py use_rviz:=false robot_ip:=panda0.robot`. All other commands are run from your own computer.
+
+
 If you need to calibrate:
    * Run `ros2 launch plan_execute jenga_full.launch.py calibrate:=true`
    * Run `ros2 service call /calibrate std_srvs/srv/Empty` to move the robot into the calibration position. Insert the april tag into the grippers (keep your hand over it until it is in the right place).
    * Run `ros2 launch camera jenga_vision.launch.py calibrate:=true`. Wait until you see a message that indicates that the calibration is complete, then remove the tag. The file `tf.yaml` will be saved in `${root_workspace}/install/camera/share/camera` and will be loaded automatically in future runs. If you want to permanently save it (for example, if the camera will not be moved after this), copy the contents into the `tf.yaml` in your `src` directory.
    * Run `ros2 service call /ready std_srvs/srv/Empty` to return the robot to the ready position. Then you can CTRL-C the program.
+
+
 Otherwise:
 * Run `ros2 launch plan_execute jenga_full.launch.py`
 * In the pop up window, ensure that the tower is visible in the color frame and make sure that it is inside the bounding square (if not, adjust the size with the trackbars)
