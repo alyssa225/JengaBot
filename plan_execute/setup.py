@@ -11,6 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml',
                                    'launch/simple_move.launch.py',
+                                   'launch/jenga_full.launch.py',
                                    'plan_execute/plan_and_execute.py']),
     ],
     install_requires=['setuptools'],
