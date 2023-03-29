@@ -14,9 +14,13 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_path
 
 
 def generate_launch_description():
+
+    plan_execute_path = get_package_share_path('plan_execute')
+    default_offsets_config_path = plan_execute_path / 'offsets.yaml'
 
     launch_franka = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -31,6 +35,7 @@ def generate_launch_description():
     movement_node = Node(
         package='plan_execute',
         executable='cv_test',
+        parameters=[default_offsets_config_path],
         output='screen'
     )
 

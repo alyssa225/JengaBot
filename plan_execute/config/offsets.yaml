@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    offset_x_pos:  0.009
+    offset_y_pos:  0.008
+    offset_x_neg:  0.013
+    offset_y_neg:  0.009
+    offset_z_pos:  0.008
+    offset_z_neg: -0.006
