@@ -12,7 +12,7 @@ from geometry_msgs.msg import Pose
 from math import dist
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
-from std_msgs.msg import Bool, Int16
+from std_msgs.msg import Bool, Int16, String
 from keras.models import load_model
 from ament_index_python.packages import get_package_share_path
 
@@ -103,6 +103,10 @@ class Cam(Node):
                                                         'layer_added',
                                                         self.layer_added_cb,
                                                         10)
+        self.pull_block_sub = self.create_subscription(String,
+                                                       'pull_block',
+                                                       self.pull_block_cb,
+                                                       10)
         # create publishers: jenga piece, top size, top ori
         self.piece_pub = self.create_publisher(Pose, 'jenga_piece', 10)
         self.top_pub = self.create_publisher(Int16, 'top_size', 10)
@@ -259,6 +263,11 @@ class Cam(Node):
             self.state = State.FINDHANDS
         else:
             self.state = State.IDLE
+
+    def pull_block_cb(self, _):
+        """Incorporate Alexa command"""
+        self.get_logger().info('Received Pull Block command')
+        self.state = State.SCANNING
 
     def layer_added_cb(self, _):
         """Movement node has placed a layer of blocks. We can now scan one more layer up."""
