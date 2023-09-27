@@ -28,3 +28,10 @@ Otherwise:
 * Run `ros2 launch camera jenga_vision.launch.py`
 * In the pop up window, ensure that the tower is visible in the color frame and make sure that it is inside the bounding square (if not, adjust the size with the trackbars)
 * Remove a piece about halfway from the tower (and ensure you can see it from the camera window). When you step away from the table, the robot will grab and place it!
+
+## Videos
+
+
+[Franka Robot Assistance Video curtesy of Hang Yin](https://www.youtube.com/watch?v=aCotjAaHfwM)
+
+[Franka Robot Stack 10 pieces Video curtesy of Kaite Hughes](https://www.youtube.com/watch?v=ZFCv9j5TN58)
